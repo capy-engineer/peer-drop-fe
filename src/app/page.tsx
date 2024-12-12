@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Home() {
   return (
     <div className="flex justify-center items-center h-screen bg-sky-300">
@@ -9,10 +11,10 @@ export default function Home() {
           </p>
         </div>
         <div className="flex justify-between mt-5">
-          <div className="flex items-center justify-center w-1/2">
+          <div className="flex items-center justify-center w-1/2 ">
             <label
               htmlFor="dropzone-file"
-              className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500"
+              className="flex flex-col items-center justify-center w-full h-[30rem] border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500"
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
@@ -46,8 +48,28 @@ export default function Home() {
           </div>
 
           <div className="w-1/2 pl-10">
-            <p className="text-3xl font-medium justify-start">Uploaded Files</p>
-            
+            <p className="text-3xl font-medium justify-start mb-4">
+              Uploaded Files
+            </p>
+            <ul>
+              <li>
+                <div className="flex items-center border-2 rounded-sm p-3">
+                  <Image
+                    width={48}
+                    height={48}
+                    src="https://img.icons8.com/color/48/pdf.png"
+                    alt="pdf"
+                  />
+                  <div className="w-full">
+                    <div className="flex justify-between">
+                      <p>Resume-pdf (100%)</p>
+                      <p>Completed</p>
+                    </div>
+                    <div className="w-full bg-blue-500 rounded-full h-1 dark:bg-gray-700 mt-1"></div>
+                  </div>
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
