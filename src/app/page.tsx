@@ -1,14 +1,49 @@
 "use client";
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import { useState } from "react";
 import Image from "next/image";
 
+interface FileUpload {
+  file: File;
+  progress: number;
+  status: "Uploading" | "Completed" | "Failed";
+}
+
 export default function Home() {
+  const [files, setFiles] = useState<FileUpload[]>([]);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    acceptedFiles.forEach(file => {
-      console.log("File:", file);
-    });
+    const newFiles = acceptedFiles.map((file) => ({
+      file,
+      progress: 0,
+      status: "Uploading" as const,
+    }));
+    setFiles((prevFiles) => [...newFiles, ...prevFiles]);
+
+    // Simulate upload progress
+    newFiles.forEach((file, index) => simulateUpload(file, index));
   }, []);
+
+  const simulateUpload = (file: FileUpload, index: number) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10; // Increment progress by 10% every interval
+      setFiles((prevFiles) =>
+        prevFiles.map((f, i) =>
+          i === index ? { ...f, progress, status: "Uploading" } : f
+        )
+      );
+      if (progress >= 100) {
+        clearInterval(interval);
+        setFiles((prevFiles) =>
+          prevFiles.map((f, i) =>
+            i === index ? { ...f, progress: 100, status: "Completed" } : f
+          )
+        );
+      }
+    }, 500); // Simulate a delay of 500ms
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -21,6 +56,18 @@ export default function Home() {
     }, // Accept all file types
     maxSize: 5 * 1024 * 1024 * 1024, // 5GB limit
   });
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith("image/"))
+      return "https://img.icons8.com/color/48/image.png";
+    if (type.startsWith("video/"))
+      return "https://img.icons8.com/color/48/video.png";
+    if (type.startsWith("audio/"))
+      return "https://img.icons8.com/color/48/music.png";
+    if (type.startsWith("application/pdf"))
+      return "https://img.icons8.com/color/48/pdf.png";
+    return "https://img.icons8.com/color/48/file.png";
+  };
 
   return (
     <div className="flex justify-center items-center h-screen bg-sky-300">
@@ -72,25 +119,39 @@ export default function Home() {
             <p className="text-3xl font-medium justify-start mb-4">
               Uploaded Files
             </p>
-            <ul>
-              <li>
-                <div className="flex items-center border-2 rounded-sm p-3">
-                  <Image
-                    width={48}
-                    height={48}
-                    src="https://img.icons8.com/color/48/pdf.png"
-                    alt="pdf"
-                  />
-                  <div className="w-full">
-                    <div className="flex justify-between">
-                      <p>Resume-pdf (100%)</p>
-                      <p>Completed</p>
+            <div className="h-[26rem] overflow-y-auto">
+              <ul>
+                {files.map((file, index) => (
+                  <li key={index} className="mb-4">
+                    <div className="flex items-center border-2 rounded-sm p-1">
+                      <Image
+                        width={48}
+                        height={48}
+                        src={getFileIcon(file.file.type)}
+                        alt={file.file.type}
+                      />
+                      <div className="w-full pl-4">
+                        <div className="flex justify-between">
+                          <p>
+                            {file.file.name.length > 20
+                              ? file.file.name.substring(0, 20) + "..."
+                              : file.file.name}{" "}
+                            {(file.file.size / (1024 * 1024)).toFixed(2)} MB
+                          </p>
+                          <p>{file.status}</p>
+                        </div>
+                        <div className="w-full bg-gray-300 rounded-full h-1 mt-1">
+                          <div
+                            className="bg-blue-500 h-1 rounded-full"
+                            style={{ width: `${file.progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-full bg-blue-500 rounded-full h-1 dark:bg-gray-700 mt-1"></div>
-                  </div>
-                </div>
-              </li>
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>
