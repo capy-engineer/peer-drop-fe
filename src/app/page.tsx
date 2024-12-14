@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useState } from "react";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 interface FileUpload {
   file: File;
@@ -71,7 +72,7 @@ export default function Home() {
 
   return (
     <div className="flex justify-center items-center h-screen bg-sky-300">
-      <div className="bg-white rounded-xl p-5 w-[70rem] h-[40rem]">
+      <div className="bg-white rounded-xl p-5 w-[65rem] h-[40rem]">
         <div>
           <h1 className="text-blue-500 text-4xl font-bold">Upload Files</h1>
           <p className="text-neutral-500 mt-4">
@@ -81,7 +82,7 @@ export default function Home() {
         <div className="flex justify-between mt-5">
           <div
             {...getRootProps()}
-            className={`flex items-center justify-center w-1/2 h-[30rem] border-2 ${
+            className={`flex items-center justify-center w-[25rem] h-[25rem] border-2 ${
               isDragActive ? "border-blue-500" : "border-gray-300"
             } border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500`}
           >
@@ -119,7 +120,7 @@ export default function Home() {
             <p className="text-3xl font-medium justify-start mb-4">
               Uploaded Files
             </p>
-            <div className="h-[26rem] overflow-y-auto">
+            <div className="h-[22rem] overflow-y-auto">
               <ul>
                 {files.map((file, index) => (
                   <li key={index} className="mb-4">
@@ -130,11 +131,11 @@ export default function Home() {
                         src={getFileIcon(file.file.type)}
                         alt={file.file.type}
                       />
-                      <div className="w-full pl-4">
+                      <div className="w-full pl-4 pr-2">
                         <div className="flex justify-between">
                           <p>
                             {file.file.name.length > 20
-                              ? file.file.name.substring(0, 20) + "..."
+                              ? file.file.name.substring(0, 15) + "..."
                               : file.file.name}{" "}
                             {(file.file.size / (1024 * 1024)).toFixed(2)} MB
                           </p>
@@ -147,12 +148,29 @@ export default function Home() {
                           ></div>
                         </div>
                       </div>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        className="size-7"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M6 18 18 6M6 6l12 12"
+                        />
+                      </svg>
                     </div>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
+        </div>
+        <div className="flex justify-center mt-4">
+          <Button variant="default" className="bg-blue-500">Send</Button>
         </div>
       </div>
     </div>
