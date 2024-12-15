@@ -4,6 +4,15 @@ import { useDropzone } from "react-dropzone";
 import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface FileUpload {
   file: File;
@@ -13,6 +22,7 @@ interface FileUpload {
 
 export default function Home() {
   const [files, setFiles] = useState<FileUpload[]>([]);
+  const [open, setOpen] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles = acceptedFiles.map((file) => ({
@@ -29,13 +39,13 @@ export default function Home() {
   const simulateUpload = (file: FileUpload, index: number) => {
     let progress = 0;
     const interval = setInterval(() => {
-      progress += 10; // Increment progress by 10% every interval
+      progress += 5; // Increment progress by 10% every interval
       setFiles((prevFiles) =>
         prevFiles.map((f, i) =>
           i === index ? { ...f, progress, status: "Uploading" } : f
         )
       );
-      if (progress >= 100) {
+      if (progress >= file.file.size / (1024 * 1024 * 5)) {
         clearInterval(interval);
         setFiles((prevFiles) =>
           prevFiles.map((f, i) =>
@@ -152,13 +162,13 @@ export default function Home() {
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
-                        stroke-width="1.5"
+                        strokeWidth="1.5"
                         stroke="currentColor"
                         className="size-7"
                       >
                         <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                           d="M6 18 18 6M6 6l12 12"
                         />
                       </svg>
@@ -170,7 +180,46 @@ export default function Home() {
           </div>
         </div>
         <div className="flex justify-center mt-4">
-          <Button variant="default" className="bg-blue-500">Send</Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button variant="default" className="bg-blue-500">
+                Send Files
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Share Files</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to share these files?
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <p>Total files: {files.length}</p>
+                <p>
+                  Total size:{" "}
+                  {(
+                    files.reduce((acc, file) => acc + file.file.size, 0) /
+                    (1024 * 1024)
+                  ).toFixed(2)}{" "}
+                  MB
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Handle file sharing logic here
+                    console.log("Sharing files...");
+                    setOpen(false);
+                  }}
+                >
+                  Share
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
