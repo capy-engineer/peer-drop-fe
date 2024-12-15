@@ -24,38 +24,41 @@ export default function FileList({ files }: FileListProps) {
   };
 
   return (
-    <div className="h-[22rem] overflow-y-auto">
-      <ul>
-        {files.map((file, index) => (
-          <li key={index} className="mb-4">
-            <div className="flex items-center border-2 rounded-sm p-1">
-              <Image
-                width={48}
-                height={48}
-                src={getFileIcon(file.file.type)}
-                alt={file.file.type}
-              />
-              <div className="w-full pl-4 pr-2">
-                <div className="flex justify-between">
-                  <p>
-                    {file.file.name.length > 20
-                      ? file.file.name.substring(0, 15) + "..."
-                      : file.file.name}{" "}
-                    {(file.file.size / (1024 * 1024)).toFixed(2)} MB
-                  </p>
-                  <p>{file.status}</p>
-                </div>
-                <div className="w-full bg-gray-300 rounded-full h-1 mt-1">
-                  <div
-                    className="bg-blue-500 h-1 rounded-full"
-                    style={{ width: `${file.progress}%` }}
-                  ></div>
+    <div className="w-1/2 pl-10">
+      <p className="text-3xl font-medium justify-start mb-4">Uploaded Files</p>
+      <div className="h-[22rem] overflow-y-auto">
+        <ul>
+          {files.map((file, index) => (
+            <li key={index} className="mb-4">
+              <div className="flex items-center border-2 rounded-sm p-1">
+                <Image
+                  width={48}
+                  height={48}
+                  src={getFileIcon(file.file.type)}
+                  alt={file.file.type}
+                />
+                <div className="w-full pl-4 pr-2">
+                  <div className="flex justify-between">
+                    <p>
+                      {file.file.name.length > 20
+                        ? file.file.name.substring(0, 15) + "..."
+                        : file.file.name}{" "}
+                      {(file.file.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                    <p>{file.status}</p>
+                  </div>
+                  <div className="w-full bg-gray-300 rounded-full h-1 mt-1">
+                    <div
+                      className="bg-blue-500 h-1 rounded-full"
+                      style={{ width: `${file.progress}%` }}
+                    ></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
