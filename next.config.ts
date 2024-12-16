@@ -10,7 +10,12 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-  }
+  },
+
+  env: {
+    NEXT_PUBLIC_CN_URL: "ws://localhost:8080/connect",
+    NEXT_PUBLIC_WS_URL: "ws://localhost:8080/ws",
+  },
 };
 
 export default nextConfig;
