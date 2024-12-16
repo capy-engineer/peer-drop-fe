@@ -58,7 +58,6 @@ export default function Home() {
         </div>
         <div className="flex justify-between mt-5">
           <FileUploader onDrop={onDrop} />
-
           <FileList files={files} />
         </div>
         <FileDialog
