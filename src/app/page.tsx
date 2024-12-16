@@ -60,6 +60,7 @@ export default function Home() {
           <FileUploader onDrop={onDrop} />
           <FileList files={files} />
         </div>
+        
         <FileDialog
           files={files.map((fileUpload) => fileUpload.file)}
           open={open}
