@@ -50,7 +50,7 @@ export default function FileDialog({ files, open, setOpen }: FileDialogProps) {
       };
 
       socket.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        alert(JSON.stringify(error));
       };
 
       socket.onclose = () => {
@@ -71,15 +71,9 @@ export default function FileDialog({ files, open, setOpen }: FileDialogProps) {
     <div className="flex justify-center mt-4">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          {files.length > 0 ? (
-            <Button variant="default" className="bg-blue-500">
-              Send Files
-            </Button>
-          ) : (
-            <Button variant="default" className="bg-blue-500 hidden">
-              Send Files
-            </Button>
-          )}
+          <Button variant="default" className="bg-blue-500">
+            Share
+          </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -93,15 +87,6 @@ export default function FileDialog({ files, open, setOpen }: FileDialogProps) {
           <div className="py-4">
             {uuid && (
               <div className="mt-4 flex flex-col items-center">
-                <p>Total files: {files.length}</p>
-                <p className="mb-4">
-                  Total size:{" "}
-                  {(
-                    files.reduce((acc, file) => acc + file.size, 0) /
-                    (1024 * 1024)
-                  ).toFixed(2)}{" "}
-                  MB
-                </p>
                 <QRCodeSVG
                   value={uuid}
                   size={256}

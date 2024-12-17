@@ -48,24 +48,29 @@ export default function Home() {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-sky-300">
-      <div className="bg-white rounded-xl p-5 w-[65rem] h-[40rem]">
-        <div>
-          <h1 className="text-blue-500 text-4xl font-bold">Upload Files</h1>
-          <p className="text-neutral-500 mt-4">
-            Upload Documents you want to share with other people
-          </p>
-        </div>
-        <div className="flex justify-between mt-5">
-          <FileUploader onDrop={onDrop} />
-          <FileList files={files} />
-        </div>
-        
-        <FileDialog
-          files={files.map((fileUpload) => fileUpload.file)}
-          open={open}
-          setOpen={setOpen}
-        />
+    // <div className="flex justify-center items-center h-screen bg-sky-300">
+    //   <div className="bg-white rounded-xl p-5 w-[65rem] h-[40rem]">
+    //     <div>
+    //       <h1 className="text-blue-500 text-4xl font-bold">Upload Files</h1>
+    //       <p className="text-neutral-500 mt-4">
+    //         Upload Documents you want to share with other people
+    //       </p>
+    //     </div>
+    //     <div className="flex justify-between mt-5">
+    //       <FileUploader onDrop={onDrop} />
+    //       <FileList files={files} />
+    //     </div>
+
+    //     <FileDialog
+    //       files={files.map((fileUpload) => fileUpload.file)}
+    //       open={open}
+    //       setOpen={setOpen}
+    //     />
+    //   </div>
+    // </div>
+    <div className="blob-outer-container">
+      <div className="blob-inner-container">
+        <div className="blob"></div>
       </div>
     </div>
   );
