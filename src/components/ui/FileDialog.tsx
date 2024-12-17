@@ -72,7 +72,7 @@ export default function FileDialog({ files, open, setOpen }: FileDialogProps) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button variant="default" className="bg-blue-500">
-            Share
+            Get Started
           </Button>
         </DialogTrigger>
         <DialogContent>
