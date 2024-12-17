@@ -9,73 +9,69 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 
 interface FileDialogProps {
-  files: File[];
+  // files: File[];
   open: boolean;
   setOpen: (open: boolean) => void;
 }
 
-export default function FileDialog({ files, open, setOpen }: FileDialogProps) {
+export default function FileDialog({ open, setOpen }: FileDialogProps) {
   const [uuid, setUuid] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    let socket: WebSocket | null = null;
+  const connectWebSocket = () => {
+    if (wsRef.current) return; // Prevent new connection if WebSocket already exists
 
     const apiHost = process.env.NEXT_PUBLIC_WS_URL;
-    console.log(apiHost);
-    if (apiHost) {
-      socket = new WebSocket(apiHost);
-
-      socket.onopen = () => {
-        console.log("Socket connection established");
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.peerId) {
-            setUuid(data.peerId);
-          } else {
-            console.warn("Unexpected WebSocket message format:", data);
-          }
-        } catch (error) {
-          console.error(
-            "Failed to parse WebSocket message:",
-            event.data,
-            error
-          );
-        }
-      };
-
-      socket.onerror = (error) => {
-        alert(JSON.stringify(error));
-      };
-
-      socket.onclose = () => {
-        console.log("WebSocket connection closed");
-      };
-    } else {
+    if (!apiHost) {
       console.error("NEXT_PUBLIC_WS_URL is not defined");
+      return;
     }
 
-    return () => {
-      if (socket) {
-        socket.close();
+    wsRef.current = new WebSocket(apiHost);
+
+    wsRef.current.onopen = () => {
+      console.log("Socket connection established");
+    };
+
+    wsRef.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.peerId) {
+          setUuid(data.peerId);
+        } else {
+          console.warn("Unexpected WebSocket message format:", data);
+        }
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", event.data, error);
       }
     };
-  }, []);
+
+    wsRef.current.onerror = (error) => {
+      alert(JSON.stringify(error));
+    };
+
+    wsRef.current.onclose = () => {
+      console.log("WebSocket connection closed");
+      wsRef.current = null; // Allow reconnection if needed
+    };
+  };
 
   return (
-    <div className="flex justify-center mt-4">
+    <div className="relative z-10 xl:top-[-360px] top-[-170px]">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="default" className="bg-blue-500">
+          <Button
+            variant="default"
+            className="text-white font-semibold text-xl rounded-xl bg-sky-500 hover:bg-sky-400  px-[2rem] py-[1.5rem]"
+            onClick={connectWebSocket}
+          >
             Get Started
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="bg-white rounded-xl p-5 ">
           <DialogHeader>
             <DialogTitle>Share Files</DialogTitle>
             <DialogDescription>
