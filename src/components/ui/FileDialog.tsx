@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -41,6 +40,8 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
         const data = JSON.parse(event.data);
         if (data.peerId) {
           setUuid(data.peerId);
+        } else if (data.type === "connect") {
+          console.log("Connection request from peer:", data);
         } else {
           console.warn("Unexpected WebSocket message format:", data);
         }
@@ -73,16 +74,12 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
         </DialogTrigger>
         <DialogContent className="bg-white rounded-xl p-5 ">
           <DialogHeader>
-            <DialogTitle>Share Files</DialogTitle>
-            <DialogDescription>
-              {uuid
-                ? "Your files are ready to be shared."
-                : "Are you sure you want to share these files?"}
-            </DialogDescription>
+            <DialogTitle>Share connection</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             {uuid && (
               <div className="mt-4 flex flex-col items-center">
+                <p className="mb-5">Device ID : {uuid}</p>
                 <QRCodeSVG
                   value={uuid}
                   size={256}
@@ -100,14 +97,14 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
                   <input
                     type="text"
                     readOnly
-                    value={`https://your-site.com/${uuid}`}
+                    value={`http://localhost:3000/connect?peerId=${uuid}`}
                     className="px-3 py-2 border rounded-md w-64"
                   />
                   <Button
                     variant="outline"
                     onClick={() => {
                       navigator.clipboard.writeText(
-                        `https://your-site.com/${uuid}`
+                        `http://localhost:3000/connect?peerId=${uuid}`
                       );
                     }}
                   >
