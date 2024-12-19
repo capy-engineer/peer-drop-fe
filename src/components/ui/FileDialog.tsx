@@ -86,12 +86,15 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
         animate-in fade-in slide-in-from-top-2
         transition-all duration-700 ease-in-out
         transform scale-100 opacity-100
-        hover:scale-105"
+        hover:scale-105
+        min-w-[320px]"
         >
-          <Alert className="bg-green-50 border-green-200">
-            <AlertCircle className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-800">Success</AlertTitle>
-            <AlertDescription className="text-green-600">
+          <Alert className="bg-green-50 border-green-200 p-6 rounded-lg border-l-4">
+            <AlertCircle className="h-6 w-6 text-green-600" />
+            <AlertTitle className="text-green-800 text-lg font-semibold">
+              Success
+            </AlertTitle>
+            <AlertDescription className="text-green-600 text-base mt-2">
               Connection established successfully.
             </AlertDescription>
           </Alert>
