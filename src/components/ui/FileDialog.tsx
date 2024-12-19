@@ -8,7 +8,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "./alert";
+import { AlertCircle } from "lucide-react";
 
 interface FileDialogProps {
   // files: File[];
@@ -18,7 +20,10 @@ interface FileDialogProps {
 
 export default function FileDialog({ open, setOpen }: FileDialogProps) {
   const [uuid, setUuid] = useState<string | null>(null);
+  const [connected, setConnected] = useState<boolean>(false);
+  const [showAlert, setShowAlert] = useState<boolean>(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = () => {
     if (wsRef.current) return; // Prevent new connection if WebSocket already exists
@@ -41,7 +46,7 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
         if (data.peerId && data.type !== "connect") {
           setUuid(data.peerId);
         } else if (data.type === "connect") {
-          console.log("Connection request from peer:", data);
+          setConnected(true);
         } else {
           console.warn("Unexpected WebSocket message format:", data);
         }
@@ -59,81 +64,104 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
       wsRef.current = null; // Allow reconnection if needed
     };
   };
+  useEffect(() => {
+    if (connected) {
+      setShowAlert(true);
+      timeoutRef.current = setTimeout(() => {
+        setShowAlert(false);
+      }, 5000);
+    }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [connected]);
 
   return (
-    <div className="relative z-10 xl:top-[-360px] top-[-170px]">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="default"
-            className="text-white font-semibold text-xl rounded-xl bg-sky-500 hover:bg-sky-400  px-[2rem] py-[1.5rem]"
-            onClick={connectWebSocket}
-          >
-            Get Started
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="bg-white rounded-xl p-5 ">
-          <DialogHeader>
-            <DialogTitle>Share connection</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {uuid && (
-              <div className="mt-4 flex flex-col items-center">
-                <p className="mb-5">Device ID : {uuid}</p>
-                <QRCodeSVG
-                  value={`${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`}
-                  size={256}
-                  // imageSettings={{
-                  //   // src: "https://picsbed.top/file/fhGovySlxNBNw%2FSC%2F%2FeAzE5Snn8RHj6GnKHzyWP36fQ%3D",
-                  //   x: undefined,
-                  //   y: undefined,
-                  //   height: 80,
-                  //   width: 80,
-                  //   opacity: 1,
-                  //   excavate: true,
-                  // }}
-                />
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`}
-                    className="px-3 py-2 border rounded-md w-64"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`
-                      );
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      className="size-6"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-                      />
-                    </svg>
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+    <>
+      {showAlert && (
+        <div
+          className="fixed top-4 right-4 z-[9999] 
+        animate-in fade-in slide-in-from-top-2
+        transition-all duration-700 ease-in-out
+        transform scale-100 opacity-100
+        hover:scale-105"
+        >
+          <Alert className="bg-green-50 border-green-200">
+            <AlertCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800">Success</AlertTitle>
+            <AlertDescription className="text-green-600">
+              Connection established successfully.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+      <div className="relative z-10 xl:top-[-360px] top-[-170px]">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="default"
+              className="text-white font-semibold text-xl rounded-xl bg-sky-500 hover:bg-sky-400  px-[2rem] py-[1.5rem]"
+              onClick={connectWebSocket}
+            >
+              Get Started
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </DialogTrigger>
+          <DialogContent className="bg-white rounded-xl p-5 ">
+            <DialogHeader>
+              <DialogTitle>Share connection</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              {uuid && (
+                <div className="mt-4 flex flex-col items-center">
+                  <p className="mb-5">Device ID : {uuid}</p>
+                  <QRCodeSVG
+                    value={`${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`}
+                    size={256}
+                  />
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`}
+                      className="px-3 py-2 border rounded-md w-64"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`
+                        );
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        className="size-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+                        />
+                      </svg>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }
