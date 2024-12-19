@@ -38,7 +38,7 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
     wsRef.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.peerId) {
+        if (data.peerId && data.type !== "connect") {
           setUuid(data.peerId);
         } else if (data.type === "connect") {
           console.log("Connection request from peer:", data);
@@ -81,30 +81,30 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
               <div className="mt-4 flex flex-col items-center">
                 <p className="mb-5">Device ID : {uuid}</p>
                 <QRCodeSVG
-                  value={uuid}
+                  value={`${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`}
                   size={256}
-                  imageSettings={{
-                    src: "https://picsbed.top/file/fhGovySlxNBNw%2FSC%2F%2FeAzE5Snn8RHj6GnKHzyWP36fQ%3D",
-                    x: undefined,
-                    y: undefined,
-                    height: 80,
-                    width: 80,
-                    opacity: 1,
-                    excavate: true,
-                  }}
+                  // imageSettings={{
+                  //   // src: "https://picsbed.top/file/fhGovySlxNBNw%2FSC%2F%2FeAzE5Snn8RHj6GnKHzyWP36fQ%3D",
+                  //   x: undefined,
+                  //   y: undefined,
+                  //   height: 80,
+                  //   width: 80,
+                  //   opacity: 1,
+                  //   excavate: true,
+                  // }}
                 />
                 <div className="mt-4 flex items-center justify-center gap-2">
                   <input
                     type="text"
                     readOnly
-                    value={`http://localhost:3000/connect?peerId=${uuid}`}
+                    value={`${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`}
                     className="px-3 py-2 border rounded-md w-64"
                   />
                   <Button
                     variant="outline"
                     onClick={() => {
                       navigator.clipboard.writeText(
-                        `http://localhost:3000/connect?peerId=${uuid}`
+                        `${process.env.NEXT_PUBLIC_HTTP_URL}/connect?peerId=${uuid}`
                       );
                     }}
                   >
