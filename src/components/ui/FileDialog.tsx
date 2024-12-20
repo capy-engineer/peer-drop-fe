@@ -11,18 +11,22 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "./alert";
 import { AlertCircle } from "lucide-react";
-
+import { redirect } from 'next/navigation'
 interface FileDialogProps {
   // files: File[];
   open: boolean;
   setOpen: (open: boolean) => void;
+  connected: boolean;
+  setConnected: (connected: boolean) => void;
+  uuid: string | null;
+  setUuid: (uuid: string | null) => void;
+  wsRef: React.RefObject<WebSocket | null>;
+  setTargetPeerId: (targetPeerId: string | null) => void;
 }
 
-export default function FileDialog({ open, setOpen }: FileDialogProps) {
-  const [uuid, setUuid] = useState<string | null>(null);
-  const [connected, setConnected] = useState<boolean>(false);
+export default function FileDialog({ open, setOpen,connected,setConnected,uuid,setUuid,wsRef,setTargetPeerId }: FileDialogProps) {
+  
   const [showAlert, setShowAlert] = useState<boolean>(false);
-  const wsRef = useRef<WebSocket | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = () => {
@@ -47,6 +51,7 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
           setUuid(data.peerId);
         } else if (data.type === "connect") {
           setConnected(true);
+          setTargetPeerId(data.peerId);
         } else {
           console.warn("Unexpected WebSocket message format:", data);
         }
@@ -56,7 +61,7 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
     };
 
     wsRef.current.onerror = (error) => {
-      alert(JSON.stringify(error));
+      console.error("WebSocket error:", error);
     };
 
     wsRef.current.onclose = () => {
@@ -69,7 +74,8 @@ export default function FileDialog({ open, setOpen }: FileDialogProps) {
       setShowAlert(true);
       timeoutRef.current = setTimeout(() => {
         setShowAlert(false);
-      }, 5000);
+        redirect('/transfer')
+      }, 3000);
     }
     return () => {
       if (timeoutRef.current) {
