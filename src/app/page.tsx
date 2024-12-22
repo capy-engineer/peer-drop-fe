@@ -9,11 +9,52 @@ export default function Home() {
   const [uuid, setUuid] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
-  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
-
+  const [peerConnection, setPeerConnection] =
+    useState<RTCPeerConnection | null>(null);
 
   useEffect(() => {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: "stun:stun.l.google.com:19302",
+        },
+      ],
+    });
 
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        wsRef.current?.send(
+          JSON.stringify({
+            type: "ice-candidate",
+            candidate: event.candidate,
+          })
+        );
+      }
+    };
+
+    const createOffer = async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        wsRef.current?.send(
+          JSON.stringify({
+            type: "offer",
+            offer: offer,
+          })
+        );
+      } catch (error) {
+        console.error("Error creating offer:", error);
+      }
+    };
+
+    createOffer();
+    setPeerConnection(pc);
+
+    return () => {
+      pc.close();
+      setPeerConnection(null);
+    };
   }, [setTargetPeerId]);
 
   return (
