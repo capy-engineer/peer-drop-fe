@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FileDialog from "@/components/ui/FileDialog";
 import BackGround from "@/components/ui/BackGround";
 
@@ -13,49 +13,27 @@ export default function Home() {
     useState<RTCPeerConnection | null>(null);
 
   useEffect(() => {
+    if (targetPeerId === null) {
+      return;
+    }
     const pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: "stun:stun.l.google.com:19302",
-        },
-      ],
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
-
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         wsRef.current?.send(
           JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
+            targetId: targetPeerId,
           })
         );
       }
     };
-
-    const createOffer = async () => {
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        wsRef.current?.send(
-          JSON.stringify({
-            type: "offer",
-            offer: offer,
-          })
-        );
-      } catch (error) {
-        console.error("Error creating offer:", error);
-      }
-    };
-
-    createOffer();
-    setPeerConnection(pc);
-
     return () => {
-      pc.close();
       setPeerConnection(null);
     };
-  }, [setTargetPeerId]);
+  }, [targetPeerId, setTargetPeerId]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
