@@ -74,7 +74,7 @@ export default function FileDialog({ open, setOpen,connected,setConnected,uuid,s
       setShowAlert(true);
       timeoutRef.current = setTimeout(() => {
         setShowAlert(false);
-        redirect('/transfer')
+        // redirect('/transfer')
       }, 3000);
     }
     return () => {
