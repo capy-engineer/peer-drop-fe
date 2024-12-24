@@ -19,21 +19,65 @@ export default function Home() {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
+
+    // Create data channel
+    const dataChannel = pc.createDataChannel("fileTransfer");
+
+    // Connection state handling
+    pc.onconnectionstatechange = () => {
+      console.log("Connection state:", pc.connectionState);
+      setConnected(pc.connectionState === "connected");
+    };
+
     pc.onicecandidate = (event) => {
+      console.log("ICE candidate event:", event);
       if (event.candidate) {
-        wsRef.current?.send(
-          JSON.stringify({
+        console.log("Found ICE candidate:", event.candidate);
+        try {
+          const message = JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
             targetId: targetPeerId,
-          })
-        );
+          });
+
+          console.log("Sending message:", message);
+
+          if (!wsRef.current) {
+            console.error("WebSocket not connected");
+            return;
+          }
+
+          wsRef.current.send(message);
+          console.log("ICE candidate sent successfully");
+        } catch (error) {
+          console.error("Error sending ICE candidate:", error);
+        }
+      } else {
+        console.log("ICE candidate gathering completed");
       }
     };
-    return () => {
-      setPeerConnection(null);
+
+    // Data channel event handlers
+    dataChannel.onopen = () => {
+      console.log("Data channel opened");
+      setConnected(true);
     };
-  }, [targetPeerId, setTargetPeerId]);
+
+    dataChannel.onclose = () => {
+      console.log("Data channel closed");
+      setConnected(false);
+    };
+
+    // Store in state
+    setPeerConnection(pc);
+
+    return () => {
+      dataChannel.close();
+      pc.close();
+      setPeerConnection(null);
+      setConnected(false);
+    };
+  }, [targetPeerId]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">

@@ -26,7 +26,9 @@ export default function Page() {
     wsRef.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log(data);
         if (data.peerId) {
+          console.log("Received peerId:", data.peerId);
         } else {
           console.warn("Unexpected WebSocket message format:", data);
         }
@@ -35,7 +37,7 @@ export default function Page() {
       }
     };
     wsRef.current.onerror = (error) => {
-      alert( JSON.stringify(error));
+      console.error("WebSocket error:", error);
     };
   };
 

@@ -30,7 +30,7 @@ export default function FileDialog({ open, setOpen,connected,setConnected,uuid,s
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = () => {
-    if (wsRef.current) return; // Prevent new connection if WebSocket already exists
+    if (wsRef.current) return; 
 
     const apiHost = process.env.NEXT_PUBLIC_WS_URL;
     if (!apiHost) {
