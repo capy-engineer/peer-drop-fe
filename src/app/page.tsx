@@ -9,8 +9,7 @@ export default function Home() {
   const [uuid, setUuid] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
-  // const [peerConnection, setPeerConnection] =
-  //   useState<RTCPeerConnection | null>(null);
+  
 
   useEffect(() => {
     if (targetPeerId === null) {
