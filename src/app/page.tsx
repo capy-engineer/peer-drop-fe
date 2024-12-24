@@ -12,93 +12,99 @@ export default function Home() {
   // const [peerConnection, setPeerConnection] =
   //   useState<RTCPeerConnection | null>(null);
 
-    useEffect(() => {
-      if (targetPeerId === null) {
-        return;
-      }
-    
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      });
-    
-      const dataChannel = pc.createDataChannel("testChannel");
-      console.log("Data channel created:", dataChannel);
-    
-      // Sự kiện kết nối và ICE
-      pc.onconnectionstatechange = () => {
-        console.log("Connection state:", pc.connectionState);
-      };
-    
-      pc.oniceconnectionstatechange = () => {
-        console.log("ICE connection state:", pc.iceConnectionState);
-      };
-    
-      pc.onicegatheringstatechange = () => {
-        console.log("ICE gathering state:", pc.iceGatheringState);
-      };
-    
-      pc.onicecandidate = (event) => {
-        console.log("ICE candidate event:", event);
-        if (event.candidate) {
-          console.log("Found ICE candidate:", event.candidate);
-          try {
-            const message = JSON.stringify({
-              type: "ice-candidate",
-              candidate: event.candidate,
-              targetId: targetPeerId,
-            });
-    
-            console.log("Sending message:", message);
-    
-            if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-              console.error("WebSocket not connected or not open");
-              return;
-            }
-    
-            wsRef.current.send(message);
-            console.log("ICE candidate sent successfully");
-          } catch (error) {
-            console.error("Error sending ICE candidate:", error);
+  useEffect(() => {
+    if (targetPeerId === null) {
+      return;
+    }
+
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    wsRef.current!.onopen = () => {
+      console.log("Socket connection established");
+    };
+    wsRef.current!.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.senderId) {
+          if (data.type === "offer") {
+            console.log("Received offer:", data.offer);
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(data.offer)
+            );
+          } else if (data.type === "ice-candidate" && data.candidate) {
+            console.log("Received ICE candidate:", data.candidate);
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
           }
         } else {
-          console.log("ICE candidate gathering completed");
+          console.warn("Unexpected WebSocket message format:", data);
         }
-      };
-    
-      // Tạo offer và đặt Local Description
-      const startConnection = async () => {
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", event.data, error);
+      }
+    };
+    wsRef.current!.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    // const dataChannel = pc.createDataChannel("testChannel");
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
         try {
-          const offer = await pc.createOffer();
-          console.log("Created offer:", offer);
-    
-          await pc.setLocalDescription(offer);
-          console.log("Local Description set:", pc.localDescription);
-    
-          // Gửi offer qua WebSocket
           const message = JSON.stringify({
-            type: "offer",
-            offer,
+            type: "ice-candidate",
+            candidate: event.candidate,
             targetId: targetPeerId,
           });
+
           if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             console.error("WebSocket not connected or not open");
             return;
           }
 
           wsRef.current.send(message);
-          console.log("Offer sent to target:", message);
+          console.log("ICE candidate sent successfully");
         } catch (error) {
-          console.error("Error during connection setup:", error);
+          console.error("Error sending ICE candidate:", error);
         }
-      };
-    
-      startConnection();
-    
-      return () => {
-        pc.close();
-      };
-    }, [targetPeerId, wsRef]);
-    
+      } else {
+        console.log("ICE candidate gathering completed");
+      }
+    };
+
+    // Tạo offer và đặt Local Description
+    const startConnection = async () => {
+      try {
+        const offer = await pc.createOffer();
+
+        await pc.setLocalDescription(offer);
+
+        // Gửi offer qua WebSocket
+        const message = JSON.stringify({
+          type: "offer",
+          offer,
+          targetId: targetPeerId,
+        });
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          console.error("WebSocket not connected or not open");
+          return;
+        }
+
+        wsRef.current.send(message);
+        console.log("Offer sent successfully");
+      } catch (error) {
+        console.error("Error during connection setup:", error);
+      }
+    };
+
+    startConnection();
+
+    return () => {
+      pc.close();
+    };
+  }, [targetPeerId, wsRef]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">

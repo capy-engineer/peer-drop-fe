@@ -1,13 +1,17 @@
 "use client";
 import BackGround from "@/components/ui/BackGround";
-import { useEffect, useRef } from "react";
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function Page() {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
   const wsRef = useRef<WebSocket | null>(null);
+  const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
 
-  const connectWebSocket = (peerId: string | undefined) => {
+  const connectWebSocket = (
+    peerId: string | undefined,
+    pc: RTCPeerConnection
+  ) => {
     const apiHost = process.env.NEXT_PUBLIC_CN_URL
       ? `${process.env.NEXT_PUBLIC_CN_URL}?peerId=${peerId || ""}`
       : undefined;
@@ -17,18 +21,26 @@ export default function Page() {
       return;
     }
 
-    console.log(apiHost);
 
     wsRef.current = new WebSocket(apiHost);
     wsRef.current.onopen = () => {
       console.log("Socket connection established");
     };
-    wsRef.current.onmessage = (event) => {
+    wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log(data);
-        if (data.peerId) {
-          console.log("Received peerId:", data.peerId);
+        if (data.senderId) {
+          if (data.type === "offer") {
+            console.log("Received offer:", data.offer);
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(data.offer)
+            );
+          } else if (data.type === "ice-candidate" && data.candidate) {
+            console.log("Received ICE candidate:", data.candidate);
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+
+          }
+          setTargetPeerId(data.senderId);
         } else {
           console.warn("Unexpected WebSocket message format:", data);
         }
@@ -42,15 +54,65 @@ export default function Page() {
   };
 
   useEffect(() => {
-    const peerId = searchParams.get('peerId');
-    connectWebSocket(peerId || undefined);
+    if (!searchParams) {
+      return;
+    }
+    const peerId = searchParams.get("peerId");
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+    connectWebSocket(peerId || undefined, pc);
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        try {
+          const message = JSON.stringify({
+            type: "ice-candidate",
+            candidate: event.candidate,
+            targetId: targetPeerId,
+          });
+  
+          if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+            console.error("WebSocket not connected or not open");
+            return;
+          }
+  
+          wsRef.current.send(message);
+          console.log("ICE candidate sent successfully");
+        } catch (error) {
+          console.error("Error sending ICE candidate:", error);
+        }
+      } else {
+        console.log("ICE candidate gathering completed");
+      }
+    };
+
+    const startConnection = async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        const message = JSON.stringify({
+          type: "offer",
+          offer,
+          targetId: targetPeerId,
+        });
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          console.error("WebSocket not connected or not open");
+          return;
+        }
+        wsRef.current.send(message);
+      } catch (error) {
+        console.error("Error sending offer:", error);
+      }
+    }
+    startConnection();
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
-  }, [searchParams]);
+  }, [searchParams, targetPeerId, wsRef]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
