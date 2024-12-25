@@ -6,12 +6,10 @@ import { useSearchParams } from "next/navigation";
 export default function Page() {
   const searchParams = useSearchParams();
   const wsRef = useRef<WebSocket | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
   const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
 
-  const connectWebSocket = (
-    peerId: string | undefined,
-    pc: RTCPeerConnection
-  ) => {
+  const connectWebSocket = (peerId: string | undefined) => {
     const apiHost = process.env.NEXT_PUBLIC_CN_URL
       ? `${process.env.NEXT_PUBLIC_CN_URL}?peerId=${peerId || ""}`
       : undefined;
@@ -21,7 +19,6 @@ export default function Page() {
       return;
     }
 
-
     wsRef.current = new WebSocket(apiHost);
     wsRef.current.onopen = () => {
       console.log("Socket connection established");
@@ -29,20 +26,21 @@ export default function Page() {
     wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.senderId) {
-          if (data.type === "offer") {
-            console.log("Received offer:", data.offer);
-            await pc.setRemoteDescription(
-              new RTCSessionDescription(data.offer)
-            );
-          } else if (data.type === "ice-candidate" && data.candidate) {
-            console.log("Received ICE candidate:", data.candidate);
-            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        if (data.peerId) {
+          setTargetPeerId(data.peerId);
+        }
 
-          }
-          setTargetPeerId(data.senderId);
-        } else {
-          console.warn("Unexpected WebSocket message format:", data);
+        if (data.type === "offer" && data.offer) {
+          console.log("Received offer:", data.offer);
+          await pcRef.current?.setRemoteDescription(
+            new RTCSessionDescription(data.offer)
+          );
+        }
+        if (data.type === "ice-candidate" && data.candidate) {
+          console.log("Received ICE candidate:", data.candidate);
+          await pcRef.current?.addIceCandidate(
+            new RTCIceCandidate(data.candidate)
+          );
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", event.data, error);
@@ -51,17 +49,18 @@ export default function Page() {
     wsRef.current.onerror = (error) => {
       console.error("WebSocket error:", error);
     };
+    wsRef.current.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
   };
 
   useEffect(() => {
-    if (!searchParams) {
-      return;
-    }
     const peerId = searchParams.get("peerId");
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
-    connectWebSocket(peerId || undefined, pc);
+    pcRef.current = pc;
+    connectWebSocket(peerId || undefined);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -71,14 +70,13 @@ export default function Page() {
             candidate: event.candidate,
             targetId: targetPeerId,
           });
-  
-          if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(message);
+            console.log("ICE candidate sent successfully");
+          } else {
             console.error("WebSocket not connected or not open");
-            return;
           }
-  
-          wsRef.current.send(message);
-          console.log("ICE candidate sent successfully");
         } catch (error) {
           console.error("Error sending ICE candidate:", error);
         }
@@ -91,28 +89,35 @@ export default function Page() {
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+
         const message = JSON.stringify({
           type: "offer",
           offer,
           targetId: targetPeerId,
         });
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(message);
+        } else {
           console.error("WebSocket not connected or not open");
-          return;
         }
-        wsRef.current.send(message);
       } catch (error) {
-        console.error("Error sending offer:", error);
+        console.error("Error creating or sending offer:", error);
       }
-    }
+    };
+
     startConnection();
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
+
+      if (pcRef.current) {
+        pcRef.current.close();
+      }
     };
-  }, [searchParams, targetPeerId, wsRef]);
+  }, [searchParams, targetPeerId]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
