@@ -9,45 +9,44 @@ export default function Page() {
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
+    // Get the peerId from the URL query params
     if (!searchParams) {
       console.error("No search params found");
       return;
     }
-
     const peerId = searchParams.get("peerId");
 
+    // Create a new RTCPeerConnection instance
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
     pcRef.current = pc;
 
+    // Create a new WebSocket connection
     const apiHost = process.env.NEXT_PUBLIC_CN_URL
       ? `${process.env.NEXT_PUBLIC_CN_URL}?peerId=${peerId || ""}`
       : undefined;
-
     if (!apiHost) {
       console.error("NEXT_PUBLIC_CN_URL is not defined");
       return;
     }
-
     wsRef.current = new WebSocket(apiHost);
     wsRef.current.onopen = () => {
       console.log("Socket connection established");
     };
+    // Handle incoming WebSocket messages
     wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.senderId) {
-          if (data.type === "offer" && data.offer) {
-            await pcRef.current?.setRemoteDescription(
-              new RTCSessionDescription(data.offer)
-            );
-          }
-          if (data.type === "ice-candidate" && data.candidate) {
-            await pcRef.current?.addIceCandidate(
-              new RTCIceCandidate(data.candidate)
-            );
-          }
+        if (data.type === "offer" && data.offer) {
+          await pcRef.current?.setRemoteDescription(
+            new RTCSessionDescription(data.offer)
+          );
+        }
+        if (data.type === "ice-candidate" && data.candidate) {
+          await pcRef.current?.addIceCandidate(
+            new RTCIceCandidate(data.candidate)
+          );
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", event.data, error);
@@ -68,13 +67,9 @@ export default function Page() {
             candidate: event.candidate,
             targetId: peerId,
           });
-
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(message);
+            wsRef.current!.send(message);
             alert("ICE candidate sent successfully");
-          } else {
-            alert("WebSocket not connected or not open");
-          }
+          
         } catch (error) {
           alert(`error sending ICE candidate: ${error}`);
         }
@@ -93,11 +88,7 @@ export default function Page() {
           offer,
           targetId: peerId,
         });
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(message);
-        } else {
-          console.error("WebSocket not connected or not open", wsRef.current);
-        }
+        wsRef.current!.send(message);
       } catch (error) {
         console.error("Error creating or sending offer:", error);
       }
