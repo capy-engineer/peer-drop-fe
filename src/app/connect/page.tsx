@@ -1,20 +1,18 @@
 "use client";
 import BackGround from "@/components/ui/BackGround";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function Page() {
   const searchParams = useSearchParams();
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const initializeWebSocket = (url: string): WebSocket => {
     const ws = new WebSocket(url);
     ws.onopen = () => console.info("WebSocket connected");
     ws.onerror = (err) => {
       console.log(err);
-      setError("WebSocket connection failed");
     };
     return ws;
   };
@@ -26,19 +24,19 @@ export default function Page() {
       return;
     }
     const peerId = searchParams.get("peerId");
-
     // Create a new RTCPeerConnection instance
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-    pcRef.current = pc;
-
+    if (!pcRef.current) {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
+      pcRef.current = pc;
+    }
+    
     // Create a new WebSocket connection
     if (!wsRef.current) {
       const wsUrl = process.env.NEXT_PUBLIC_CN_URL; // Replace with your WebSocket URL
       if (!wsUrl) {
         console.error("WebSocket URL is not defined");
-        setError("WebSocket URL missing");
         return;
       }
       const url = `${wsUrl}?peerId=${peerId}`;
@@ -53,6 +51,18 @@ export default function Page() {
           await pcRef.current?.setRemoteDescription(
             new RTCSessionDescription(data.offer)
           );
+          const answer = await pcRef.current?.createAnswer();
+          await pcRef.current?.setLocalDescription(answer);
+          if (wsRef.current!.readyState !== WebSocket.OPEN) {
+            return;
+          }
+          wsRef.current!.send(
+            JSON.stringify({
+              type: "answer",
+              answer,
+              targetId: peerId,
+            })
+          );
         }
         if (data.type === "ice-candidate" && data.candidate) {
           await pcRef.current?.addIceCandidate(
@@ -64,12 +74,9 @@ export default function Page() {
       }
     };
 
-    pc.onicecandidate = (event) => {
+    // Handle ICE candidates
+    pcRef.current.onicecandidate = (event) => {
       if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
-        if (wsRef.current.readyState !== WebSocket.OPEN) {
-          console.error("WebSocket is not open");
-          return;
-        }
         wsRef.current.send(
           JSON.stringify({
             type: "ice-candidate",
@@ -79,27 +86,6 @@ export default function Page() {
         );
       }
     };
-
-    const startConnection = async () => {
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        const message = JSON.stringify({
-          type: "offer",
-          offer,
-          targetId: peerId,
-        });
-        if (wsRef.current?.readyState !== WebSocket.OPEN) {
-          console.info("WebSocket is not open");
-          return;
-        }
-        wsRef.current?.send(message);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    startConnection();
 
     return () => {
       if (wsRef.current) {
@@ -119,7 +105,6 @@ export default function Page() {
         <div className="text-white font-bold italic xl:text-5xl text-5xl p-4  rounded-lg">
           Upload, share, and download &mdash; it&apos;s that simple.
         </div>
-        {error && <div className="text-red-500">{error}</div>}
       </div>
 
       <style jsx global>{`

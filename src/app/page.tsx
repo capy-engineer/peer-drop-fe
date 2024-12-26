@@ -25,8 +25,23 @@ export default function Home() {
     if (!targetPeerId) return;
 
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+      ],
     });
+    console.log("Initial ICE gathering state:", pc.iceGatheringState);
+    if (pc.iceGatheringState === "complete") {
+      console.log("ICE gathering is already complete.");
+    } else {
+      pc.addEventListener("icegatheringstatechange", () => {
+        console.log("ICE gathering state changed:", pc.iceGatheringState);
+        if (pc.iceGatheringState === "complete") {
+          console.log("ICE gathering is complete.");
+        }
+      });
+    }
+    pc.createDataChannel("test");
 
     if (!wsRef.current) {
       const wsUrl = process.env.NEXT_PUBLIC_WS_URL; // Replace with your WebSocket URL
@@ -35,23 +50,22 @@ export default function Home() {
         setError("WebSocket URL missing");
         return;
       }
+
       wsRef.current = initializeWebSocket(wsUrl);
     }
 
     wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.senderId === targetPeerId) {
-          if (data.type === "offer") {
-            console.log("Received offer:", data.offer);
-            await pc.setRemoteDescription(
-              new RTCSessionDescription(data.offer)
-            );
-          }
-          if (data.type === "ice-candidate" && data.candidate) {
-            console.log("Received ICE candidate:", data.candidate);
-            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-          }
+        console.log("Received message:", data);
+        if (data.type === "answer" && data.answer) {
+          console.log("Received answer:", data.answer);
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+        if (data.type === "ice-candidate" && data.candidate) {
+          console.log("Received ICE candidate:", data.candidate);
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          console.log("Added ICE candidate.");
         }
       } catch (err) {
         console.error("WebSocket message parsing error:", err);
@@ -59,6 +73,7 @@ export default function Home() {
     };
 
     pc.onicecandidate = (event) => {
+      console.log("onicecandidate triggered:", event.candidate);
       if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
@@ -67,9 +82,12 @@ export default function Home() {
             targetId: targetPeerId,
           })
         );
+        console.log("Sent ICE candidate:", event.candidate);
+      } else {
+        console.log("End of candidates.");
       }
     };
-
+    
     const startConnection = async () => {
       try {
         const offer = await pc.createOffer();
