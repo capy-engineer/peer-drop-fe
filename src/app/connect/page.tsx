@@ -1,15 +1,26 @@
 "use client";
 import BackGround from "@/components/ui/BackGround";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function Page() {
   const searchParams = useSearchParams();
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
 
-  const connectWebSocket = (peerId: string | undefined) => {
+  useEffect(() => {
+    if (!searchParams) {
+      console.error("No search params found");
+      return;
+    }
+
+    const peerId = searchParams.get("peerId");
+
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+    pcRef.current = pc;
+
     const apiHost = process.env.NEXT_PUBLIC_CN_URL
       ? `${process.env.NEXT_PUBLIC_CN_URL}?peerId=${peerId || ""}`
       : undefined;
@@ -26,21 +37,17 @@ export default function Page() {
     wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.peerId) {
-          setTargetPeerId(data.peerId);
-        }
-
-        if (data.type === "offer" && data.offer) {
-          console.log("Received offer:", data.offer);
-          await pcRef.current?.setRemoteDescription(
-            new RTCSessionDescription(data.offer)
-          );
-        }
-        if (data.type === "ice-candidate" && data.candidate) {
-          console.log("Received ICE candidate:", data.candidate);
-          await pcRef.current?.addIceCandidate(
-            new RTCIceCandidate(data.candidate)
-          );
+        if (data.senderId) {
+          if (data.type === "offer" && data.offer) {
+            await pcRef.current?.setRemoteDescription(
+              new RTCSessionDescription(data.offer)
+            );
+          }
+          if (data.type === "ice-candidate" && data.candidate) {
+            await pcRef.current?.addIceCandidate(
+              new RTCIceCandidate(data.candidate)
+            );
+          }
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", event.data, error);
@@ -52,15 +59,6 @@ export default function Page() {
     wsRef.current.onclose = () => {
       console.log("WebSocket connection closed");
     };
-  };
-
-  useEffect(() => {
-    const peerId = searchParams.get("peerId");
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-    pcRef.current = pc;
-    connectWebSocket(peerId || undefined);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -68,17 +66,17 @@ export default function Page() {
           const message = JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
-            targetId: targetPeerId,
+            targetId: peerId,
           });
 
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(message);
-            console.log("ICE candidate sent successfully");
+            alert("ICE candidate sent successfully");
           } else {
-            console.error("WebSocket not connected or not open");
+            alert("WebSocket not connected or not open");
           }
         } catch (error) {
-          console.error("Error sending ICE candidate:", error);
+          alert(`error sending ICE candidate: ${error}`);
         }
       } else {
         console.log("ICE candidate gathering completed");
@@ -93,19 +91,17 @@ export default function Page() {
         const message = JSON.stringify({
           type: "offer",
           offer,
-          targetId: targetPeerId,
+          targetId: peerId,
         });
-
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(message);
         } else {
-          console.error("WebSocket not connected or not open");
+          console.error("WebSocket not connected or not open", wsRef.current);
         }
       } catch (error) {
         console.error("Error creating or sending offer:", error);
       }
     };
-
     startConnection();
 
     return () => {
@@ -117,7 +113,7 @@ export default function Page() {
         pcRef.current.close();
       }
     };
-  }, [searchParams, targetPeerId]);
+  }, [searchParams]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
