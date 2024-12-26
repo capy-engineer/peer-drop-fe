@@ -1,12 +1,23 @@
 "use client";
 import BackGround from "@/components/ui/BackGround";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function Page() {
   const searchParams = useSearchParams();
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const initializeWebSocket = (url: string): WebSocket => {
+    const ws = new WebSocket(url);
+    ws.onopen = () => console.info("WebSocket connected");
+    ws.onerror = (err) => {
+      console.log(err);
+      setError("WebSocket connection failed");
+    };
+    return ws;
+  };
 
   useEffect(() => {
     // Get the peerId from the URL query params
@@ -23,17 +34,17 @@ export default function Page() {
     pcRef.current = pc;
 
     // Create a new WebSocket connection
-    const apiHost = process.env.NEXT_PUBLIC_CN_URL
-      ? `${process.env.NEXT_PUBLIC_CN_URL}?peerId=${peerId || ""}`
-      : undefined;
-    if (!apiHost) {
-      console.error("NEXT_PUBLIC_CN_URL is not defined");
-      return;
+    if (!wsRef.current) {
+      const wsUrl = process.env.NEXT_PUBLIC_CN_URL; // Replace with your WebSocket URL
+      if (!wsUrl) {
+        console.error("WebSocket URL is not defined");
+        setError("WebSocket URL missing");
+        return;
+      }
+      const url = `${wsUrl}?peerId=${peerId}`;
+      wsRef.current = initializeWebSocket(url);
     }
-    wsRef.current = new WebSocket(apiHost);
-    wsRef.current.onopen = () => {
-      console.log("Socket connection established");
-    };
+
     // Handle incoming WebSocket messages
     wsRef.current.onmessage = async (event) => {
       try {
@@ -52,29 +63,20 @@ export default function Page() {
         console.error("Failed to parse WebSocket message:", event.data, error);
       }
     };
-    wsRef.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-    wsRef.current.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
 
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        try {
-          const message = JSON.stringify({
+      if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
+        if (wsRef.current.readyState !== WebSocket.OPEN) {
+          console.error("WebSocket is not open");
+          return;
+        }
+        wsRef.current.send(
+          JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
             targetId: peerId,
-          });
-            wsRef.current!.send(message);
-            alert("ICE candidate sent successfully");
-          
-        } catch (error) {
-          alert(`error sending ICE candidate: ${error}`);
-        }
-      } else {
-        console.log("ICE candidate gathering completed");
+          })
+        );
       }
     };
 
@@ -88,9 +90,13 @@ export default function Page() {
           offer,
           targetId: peerId,
         });
-        wsRef.current!.send(message);
+        if (wsRef.current?.readyState !== WebSocket.OPEN) {
+          console.info("WebSocket is not open");
+          return;
+        }
+        wsRef.current?.send(message);
       } catch (error) {
-        console.error("Error creating or sending offer:", error);
+        console.log(error);
       }
     };
     startConnection();
@@ -113,6 +119,7 @@ export default function Page() {
         <div className="text-white font-bold italic xl:text-5xl text-5xl p-4  rounded-lg">
           Upload, share, and download &mdash; it&apos;s that simple.
         </div>
+        {error && <div className="text-red-500">{error}</div>}
       </div>
 
       <style jsx global>{`

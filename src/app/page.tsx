@@ -47,7 +47,8 @@ export default function Home() {
             await pc.setRemoteDescription(
               new RTCSessionDescription(data.offer)
             );
-          } else if (data.type === "ice-candidate" && data.candidate) {
+          }
+          if (data.type === "ice-candidate" && data.candidate) {
             console.log("Received ICE candidate:", data.candidate);
             await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
           }
