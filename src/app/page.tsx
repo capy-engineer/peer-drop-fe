@@ -7,7 +7,8 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [connected, setConnected] = useState<boolean>(false);
   const [uuid, setUuid] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const wsRefA = useRef<WebSocket | null>(null);
+  const pcRefA = useRef<RTCPeerConnection | null>(null);
   const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,24 +31,26 @@ export default function Home() {
         { urls: "stun:stun2.l.google.com:19302" },
       ],
     });
+    pcRefA.current = pc;
+
     // Monitor ICE connection state
-    pc.oniceconnectionstatechange = () => {
-      console.log("ICE connection state:", pc.iceConnectionState);
-      if (pc.iceConnectionState === "connected") {
+    pcRefA.current.oniceconnectionstatechange = () => {
+      console.log("ICE connection state:", pcRefA.current?.iceConnectionState);
+      if (pcRefA.current?.iceConnectionState === "connected") {
         console.log("P2P connection established!");
       }
     };
 
     // Monitor general connection state
-    pc.onconnectionstatechange = () => {
-      console.log("Connection state:", pc.connectionState);
-      if (pc.connectionState === "connected") {
+    pcRefA.current.onconnectionstatechange = () => {
+      console.log("Connection state:", pcRefA.current?.connectionState);
+      if (pcRefA.current?.connectionState === "connected") {
         console.log("P2P connection fully established!");
       }
     };
-    pc.createDataChannel("test");
+    pcRefA.current?.createDataChannel("test");
 
-    if (!wsRef.current) {
+    if (!wsRefA.current) {
       const wsUrl = process.env.NEXT_PUBLIC_WS_URL; // Replace with your WebSocket URL
       if (!wsUrl) {
         console.error("WebSocket URL is not defined");
@@ -55,17 +58,17 @@ export default function Home() {
         return;
       }
 
-      wsRef.current = initializeWebSocket(wsUrl);
+      wsRefA.current = initializeWebSocket(wsUrl);
     }
 
-    wsRef.current.onmessage = async (event) => {
+    wsRefA.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "answer" && data.answer) {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          await pcRefA.current?.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
         if (data.type === "ice-candidate" && data.candidate) {
-          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          await pcRefA.current?.addIceCandidate(new RTCIceCandidate(data.candidate));
           console.log("Added ICE candidate.");
         }
       } catch (err) {
@@ -73,9 +76,9 @@ export default function Home() {
       }
     };
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
+    pcRefA.current.onicecandidate = (event) => {
+      if (event.candidate && wsRefA.current?.readyState === WebSocket.OPEN) {
+        wsRefA.current.send(
           JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
@@ -89,9 +92,9 @@ export default function Home() {
 
     const startConnection = async () => {
       try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        wsRef.current?.send(
+        const offer = await pcRefA.current?.createOffer();
+        await pcRefA.current?.setLocalDescription(offer);
+        wsRefA.current?.send(
           JSON.stringify({
             type: "offer",
             offer,
@@ -106,8 +109,8 @@ export default function Home() {
     startConnection();
 
     return () => {
-      pc.close();
-      wsRef.current?.close();
+      pcRefA.current?.close();
+      wsRefA.current?.close();
     };
   }, [targetPeerId]);
 
@@ -127,7 +130,7 @@ export default function Home() {
         setConnected={setConnected}
         uuid={uuid}
         setUuid={setUuid}
-        wsRef={wsRef}
+        wsRef={wsRefA}
         setTargetPeerId={setTargetPeerId}
       />
     </div>
