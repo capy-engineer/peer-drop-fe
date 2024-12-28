@@ -30,17 +30,21 @@ export default function Home() {
         { urls: "stun:stun2.l.google.com:19302" },
       ],
     });
-    console.log("Initial ICE gathering state:", pc.iceGatheringState);
-    if (pc.iceGatheringState === "complete") {
-      console.log("ICE gathering is already complete.");
-    } else {
-      pc.addEventListener("icegatheringstatechange", () => {
-        console.log("ICE gathering state changed:", pc.iceGatheringState);
-        if (pc.iceGatheringState === "complete") {
-          console.log("ICE gathering is complete.");
-        }
-      });
-    }
+    // Monitor ICE connection state
+    pc.oniceconnectionstatechange = () => {
+      console.log("ICE connection state:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected") {
+        console.log("P2P connection established!");
+      }
+    };
+
+    // Monitor general connection state
+    pc.onconnectionstatechange = () => {
+      console.log("Connection state:", pc.connectionState);
+      if (pc.connectionState === "connected") {
+        console.log("P2P connection fully established!");
+      }
+    };
     pc.createDataChannel("test");
 
     if (!wsRef.current) {
@@ -57,13 +61,10 @@ export default function Home() {
     wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("Received message:", data);
         if (data.type === "answer" && data.answer) {
-          console.log("Received answer:", data.answer);
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
         if (data.type === "ice-candidate" && data.candidate) {
-          console.log("Received ICE candidate:", data.candidate);
           await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
           console.log("Added ICE candidate.");
         }
@@ -73,7 +74,6 @@ export default function Home() {
     };
 
     pc.onicecandidate = (event) => {
-      console.log("onicecandidate triggered:", event.candidate);
       if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
@@ -82,12 +82,11 @@ export default function Home() {
             targetId: targetPeerId,
           })
         );
-        console.log("Sent ICE candidate:", event.candidate);
       } else {
         console.log("End of candidates.");
       }
     };
-    
+
     const startConnection = async () => {
       try {
         const offer = await pc.createOffer();
