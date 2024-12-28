@@ -2,22 +2,27 @@
 import { useEffect, useRef, useState } from "react";
 import FileDialog from "@/components/ui/FileDialog";
 import BackGround from "@/components/ui/BackGround";
+import { useWebSocketStore } from "@/store/ws";
 
 export default function Home() {
   const [open, setOpen] = useState(false);
-  const [connected, setConnected] = useState<boolean>(false);
-  const [uuid, setUuid] = useState<string | null>(null);
-  const wsRefA = useRef<WebSocket | null>(null);
   const pcRefA = useRef<RTCPeerConnection | null>(null);
-  const [targetPeerId, setTargetPeerId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    targetPeerId,
+    setTargetPeerId,
+    uuid,
+    setUuid,
+    connected,
+    setConnected,
+    wsRef,
+    setWsRef,
+  } = useWebSocketStore();
 
   const initializeWebSocket = (url: string): WebSocket => {
     const ws = new WebSocket(url);
     ws.onopen = () => console.log("WebSocket connected");
     ws.onerror = (err) => {
       console.error("WebSocket error:", err);
-      setError("WebSocket connection failed");
     };
     return ws;
   };
@@ -50,25 +55,30 @@ export default function Home() {
     };
     pcRefA.current?.createDataChannel("test");
 
-    if (!wsRefA.current) {
+    if (!wsRef.current) {
       const wsUrl = process.env.NEXT_PUBLIC_WS_URL; // Replace with your WebSocket URL
       if (!wsUrl) {
         console.error("WebSocket URL is not defined");
-        setError("WebSocket URL missing");
         return;
       }
 
-      wsRefA.current = initializeWebSocket(wsUrl);
+      const ws = initializeWebSocket(wsUrl);
+      setWsRef(ws);
     }
 
-    wsRefA.current.onmessage = async (event) => {
+    if (!wsRef.current) return;
+    wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "answer" && data.answer) {
-          await pcRefA.current?.setRemoteDescription(new RTCSessionDescription(data.answer));
+          await pcRefA.current?.setRemoteDescription(
+            new RTCSessionDescription(data.answer)
+          );
         }
         if (data.type === "ice-candidate" && data.candidate) {
-          await pcRefA.current?.addIceCandidate(new RTCIceCandidate(data.candidate));
+          await pcRefA.current?.addIceCandidate(
+            new RTCIceCandidate(data.candidate)
+          );
           console.log("Added ICE candidate.");
         }
       } catch (err) {
@@ -77,8 +87,8 @@ export default function Home() {
     };
 
     pcRefA.current.onicecandidate = (event) => {
-      if (event.candidate && wsRefA.current?.readyState === WebSocket.OPEN) {
-        wsRefA.current.send(
+      if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
           JSON.stringify({
             type: "ice-candidate",
             candidate: event.candidate,
@@ -94,7 +104,7 @@ export default function Home() {
       try {
         const offer = await pcRefA.current?.createOffer();
         await pcRefA.current?.setLocalDescription(offer);
-        wsRefA.current?.send(
+        wsRef.current?.send(
           JSON.stringify({
             type: "offer",
             offer,
@@ -108,11 +118,12 @@ export default function Home() {
 
     startConnection();
 
+    const ws = wsRef.current;
     return () => {
       pcRefA.current?.close();
-      wsRefA.current?.close();
+      ws?.close();
     };
-  }, [targetPeerId]);
+  }, [targetPeerId, setWsRef, wsRef]);
 
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
@@ -121,7 +132,6 @@ export default function Home() {
         <div className="text-white font-bold italic xl:text-6xl text-6xl p-4">
           Drag. Drop. Share — collaboration made simple.
         </div>
-        {error && <div className="text-red-500">{error}</div>}
       </div>
       <FileDialog
         open={open}
@@ -130,7 +140,7 @@ export default function Home() {
         setConnected={setConnected}
         uuid={uuid}
         setUuid={setUuid}
-        wsRef={wsRefA}
+        wsRef={wsRef}
         setTargetPeerId={setTargetPeerId}
       />
     </div>
