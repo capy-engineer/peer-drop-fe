@@ -11,6 +11,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "./alert";
 import { AlertCircle } from "lucide-react";
+import { redirect } from "next/navigation";
 // import { redirect } from 'next/navigation'
 interface FileDialogProps {
   // files: File[];
@@ -24,13 +25,21 @@ interface FileDialogProps {
   setTargetPeerId: (targetPeerId: string | null) => void;
 }
 
-export default function FileDialog({ open, setOpen,connected,setConnected,uuid,setUuid,wsRef,setTargetPeerId }: FileDialogProps) {
-  
+export default function FileDialog({
+  open,
+  setOpen,
+  connected,
+  setConnected,
+  uuid,
+  setUuid,
+  wsRef,
+  setTargetPeerId,
+}: FileDialogProps) {
   const [showAlert, setShowAlert] = useState<boolean>(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = () => {
-    if (wsRef.current) return; 
+    if (wsRef.current) return;
 
     const apiHost = process.env.NEXT_PUBLIC_WS_URL;
     if (!apiHost) {
@@ -64,17 +73,17 @@ export default function FileDialog({ open, setOpen,connected,setConnected,uuid,s
       console.error("WebSocket error:", error);
     };
 
-    wsRef.current.onclose = () => {
-      console.log("WebSocket connection closed");
-      wsRef.current = null; // Allow reconnection if needed
-    };
+    // wsRef.current.onclose = () => {
+    //   console.log("WebSocket connection closed");
+    //   wsRef.current = null; // Allow reconnection if needed
+    // };
   };
   useEffect(() => {
     if (connected) {
       setShowAlert(true);
       timeoutRef.current = setTimeout(() => {
         setShowAlert(false);
-        // redirect('/transfer')
+        redirect("/transfer");
       }, 3000);
     }
     return () => {
