@@ -12,9 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "./alert";
 import { AlertCircle } from "lucide-react";
 import { redirect } from "next/navigation";
-// import { redirect } from 'next/navigation'
 interface FileDialogProps {
-  // files: File[];
   open: boolean;
   setOpen: (open: boolean) => void;
   connected: boolean;
