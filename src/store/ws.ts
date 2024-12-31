@@ -11,6 +11,8 @@ interface WebSocketStore {
   setWsRef: (wsRef: WebSocket | null) => void;
   pcRef: React.RefObject<RTCPeerConnection | null>;
   setPcRef: (pcRef: RTCPeerConnection | null) => void;
+  dataChannelRef: React.RefObject<RTCDataChannel | null>;
+  setDataChannelRef: (dataChannelRef: RTCDataChannel | null) => void;
 }
 
 export const useWebSocketStore = create<WebSocketStore>((set) => ({
@@ -24,4 +26,7 @@ export const useWebSocketStore = create<WebSocketStore>((set) => ({
   setWsRef: (wsRef) => set({ wsRef: { current: wsRef } }),
   pcRef: { current: null },
   setPcRef: (pcRef) => set({ pcRef: { current: pcRef } }),
+  dataChannelRef: { current: null },
+  setDataChannelRef: (dataChannelRef) =>
+    set({ dataChannelRef: { current: dataChannelRef } }),
 }));

@@ -15,6 +15,8 @@ export default function Home() {
     setConnected,
     wsRef,
     pcRef,
+    dataChannelRef,
+    setDataChannelRef,
   } = useWebSocketStore();
 
   const initializeWebSocket = (url: string): WebSocket => {
@@ -37,9 +39,19 @@ export default function Home() {
     });
     pcRef.current = pc;
 
+    const dataChannel = pcRef.current?.createDataChannel("transfer");
+    if (dataChannel) {
+      dataChannel.onopen = () => {
+        console.log("Data channel is open and ready to use!");
+      };
+      dataChannel.onclose = () => {
+        console.log("Data channel is closed");
+      };
+    }
     
-    pcRef.current?.createDataChannel("transfer");
+    setDataChannelRef(dataChannel);
 
+    
     if (!wsRef.current) {
       const wsUrl = process.env.NEXT_PUBLIC_WS_URL; // Replace with your WebSocket URL
       if (!wsUrl) {
@@ -106,13 +118,20 @@ export default function Home() {
       // pcRef.current?.close();
       // ws?.close();
     };
-  }, [targetPeerId, wsRef, pcRef]);
-  console.log(targetPeerId);
-  console.log(uuid);
-  console.log(connected);
-  console.log(JSON.stringify(wsRef));
-  console.log(JSON.stringify(pcRef));
-  console.log("==");
+  }, [targetPeerId, wsRef, pcRef, setDataChannelRef]);
+
+  if (dataChannelRef.current) {
+    console.log(
+      JSON.stringify({
+        label: dataChannelRef.current.label,
+        readyState: dataChannelRef.current.readyState,
+        ordered: dataChannelRef.current.ordered,
+        protocol: dataChannelRef.current.protocol,
+      })
+    );
+  } else {
+    console.log("DataChannelRef is null");
+  }
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
       <BackGround />

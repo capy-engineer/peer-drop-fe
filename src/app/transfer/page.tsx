@@ -1,7 +1,7 @@
 "use client";
 
 import BackGround from "@/components/ui/BackGround";
-import FileDialog from "@/components/ui/FileDialog";
+import { Button } from "@/components/ui/button";
 import FileList from "@/components/ui/FileList";
 import FileUploader from "@/components/ui/FileUploader";
 import { useWebSocketStore } from "@/store/ws";
@@ -12,15 +12,82 @@ interface FileUpload {
   progress: number;
   status: "Uploading" | "Completed" | "Failed";
 }
+const CHUNK_SIZE = 16384; // 16KB chunks
+
+interface FileTransfer extends FileUpload {
+  id: string;
+  totalChunks: number;
+  currentChunk: number;
+}
 
 export default function Page() {
-  const [files, setFiles] = useState<FileUpload[]>([]);
-  const { targetPeerId, uuid, connected, wsRef, pcRef } = useWebSocketStore();
+  const [files, setFiles] = useState<FileTransfer[]>([]);
+const { dataChannelRef } = useWebSocketStore();
+console.log(dataChannelRef.current);
+  const sendFile = async (file: File) => {
+    if (!dataChannelRef.current) return;
+
+    const fileId = crypto.randomUUID();
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    // Send metadata first
+    dataChannelRef.current.send(
+      JSON.stringify({
+        type: "metadata",
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        totalChunks,
+      })
+    );
+    const reader = new FileReader();
+    let offset = 0;
+
+    const sendChunk = async () => {
+      if (offset >= file.size) return;
+
+      const chunk = file.slice(offset, offset + CHUNK_SIZE);
+      reader.readAsArrayBuffer(chunk);
+
+      reader.onload = (e) => {
+        dataChannelRef.current?.send(
+          JSON.stringify({
+            type: "chunk",
+            id: fileId,
+            chunk: e.target?.result,
+            index: Math.floor(offset / CHUNK_SIZE),
+          })
+        );
+
+        offset += CHUNK_SIZE;
+        const progress = Math.min(100, (offset / file.size) * 100);
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                  ...f,
+                  progress,
+                  currentChunk: Math.floor(offset / CHUNK_SIZE),
+                }
+              : f
+          )
+        );
+        sendChunk();
+      };
+    };
+
+    sendChunk();
+  };
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles = acceptedFiles.map((file) => ({
+      id: crypto.randomUUID(),
       file,
       progress: 0,
       status: "Uploading" as const,
+      totalChunks: Math.ceil(file.size / CHUNK_SIZE),
+      currentChunk: 0,
     }));
     setFiles((prevFiles) => [...newFiles, ...prevFiles]);
     // Simulate upload progress
@@ -49,7 +116,7 @@ export default function Page() {
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
       <BackGround />
-      <div className="flex justify-center items-center h-screen bg-sky-300">
+      <div className="flex justify-center items-center h-screen z-50">
         <div className="bg-white rounded-xl p-5 w-[65rem] h-[40rem]">
           <div>
             <h1 className="text-blue-500 text-4xl font-bold">Upload Files</h1>
@@ -61,6 +128,7 @@ export default function Page() {
             <FileUploader onDrop={onDrop} />
             <FileList files={files} />
           </div>
+          <Button className="">Send</Button>
         </div>
       </div>
       <div className="blob-outer-container">
