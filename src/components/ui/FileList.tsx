@@ -6,7 +6,7 @@ interface FileUpload {
   status: "Uploading" | "Completed" | "Failed";
 }
 
-interface FileListProps {
+export interface FileListProps {
   files: FileUpload[];
 }
 
