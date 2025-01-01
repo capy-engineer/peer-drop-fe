@@ -22,14 +22,19 @@ interface FileTransfer extends FileUpload {
 
 export default function Page() {
   const [files, setFiles] = useState<FileTransfer[]>([]);
-const { dataChannelRef } = useWebSocketStore();
+  const { dataChannelRef } = useWebSocketStore();
 
-const sendFiles = async () => {
-  files.forEach((file) => sendFile(file.file));
-}
+  const sendFiles = async () => {
+    if (!dataChannelRef.current) {
+      console.error("Data channel is not ready");
+      return;
+    }
+    files.forEach((file) => sendFile(file.file));
+  };  
 
-const sendFile = async (file: File) => {
+  const sendFile = async (file: File) => {
     if (!dataChannelRef.current) return;
+    console.log("Sending file", file.name);
 
     const fileId = crypto.randomUUID();
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
@@ -117,7 +122,6 @@ const sendFile = async (file: File) => {
     }, 500); // Simulate a delay of 500ms
   };
 
-  console.log(files);
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
       <BackGround />
@@ -133,7 +137,9 @@ const sendFile = async (file: File) => {
             <FileUploader onDrop={onDrop} />
             <FileList files={files} />
           </div>
-          <Button className="" onClick={sendFiles}>Send</Button>
+          <Button className="" onClick={sendFiles}>
+            Send
+          </Button>
         </div>
       </div>
       <div className="blob-outer-container">

@@ -18,5 +18,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_HTTP_URL: "http://192.168.1.14:3000"
   },
 };
+module.exports = {
+  output: 'standalone',
+};
 
 export default nextConfig;

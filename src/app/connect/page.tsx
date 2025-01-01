@@ -1,85 +1,78 @@
-"use client";
-import BackGround from "@/components/ui/BackGround";
-import { useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+'use client';
 
-export default function Page() {
+import React, { Suspense, useEffect, useRef } from 'react';
+import BackGround from '@/components/ui/BackGround';
+import { useSearchParams } from 'next/navigation';
+
+function ConnectComponent() {
   const searchParams = useSearchParams();
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
   const initializeWebSocket = (url: string): WebSocket => {
     const ws = new WebSocket(url);
-    ws.onopen = () => console.info("WebSocket connected");
+    ws.onopen = () => console.info('WebSocket connected');
     ws.onerror = (err) => {
-      console.log(err);
+      console.error(err);
     };
     return ws;
   };
 
   useEffect(() => {
-    // Get the peerId from the URL query params
-    if (!searchParams) {
-      console.error("No search params found");
+    const peerId = searchParams?.get('peerId');
+    if (!peerId) {
+      console.error('peerId is missing in searchParams');
       return;
     }
-    const peerId = searchParams.get("peerId");
-    // Create a new RTCPeerConnection instance
+
     if (!pcRef.current) {
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
       pcRef.current = pc;
     }
-    
-    // Create a new WebSocket connection
+
     if (!wsRef.current) {
-      const wsUrl = process.env.NEXT_PUBLIC_CN_URL; // Replace with your WebSocket URL
+      const wsUrl = process.env.NEXT_PUBLIC_CN_URL;
       if (!wsUrl) {
-        console.error("WebSocket URL is not defined");
+        console.error('WebSocket URL is not defined');
         return;
       }
-      const url = `${wsUrl}?peerId=${peerId}`;
-      wsRef.current = initializeWebSocket(url);
+      wsRef.current = initializeWebSocket(`${wsUrl}?peerId=${peerId}`);
     }
 
-    // Handle incoming WebSocket messages
     wsRef.current.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "offer" && data.offer) {
+        if (data.type === 'offer' && data.offer) {
           await pcRef.current?.setRemoteDescription(
             new RTCSessionDescription(data.offer)
           );
           const answer = await pcRef.current?.createAnswer();
           await pcRef.current?.setLocalDescription(answer);
-          if (wsRef.current!.readyState !== WebSocket.OPEN) {
-            return;
-          }
-          wsRef.current!.send(
+          wsRef.current?.send(
             JSON.stringify({
-              type: "answer",
+              type: 'answer',
               answer,
               targetId: peerId,
             })
           );
         }
-        if (data.type === "ice-candidate" && data.candidate) {
+        if (data.type === 'ice-candidate' && data.candidate) {
           await pcRef.current?.addIceCandidate(
             new RTCIceCandidate(data.candidate)
           );
         }
       } catch (error) {
-        console.error("Failed to parse WebSocket message:", event.data, error);
+        console.error('Failed to parse WebSocket message:', event.data, error);
       }
     };
 
-    // Handle ICE candidates
     pcRef.current.onicecandidate = (event) => {
       if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
-            type: "ice-candidate",
+            type: 'ice-candidate',
             candidate: event.candidate,
             targetId: peerId,
           })
@@ -88,13 +81,8 @@ export default function Page() {
     };
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-
-      if (pcRef.current) {
-        pcRef.current.close();
-      }
+      wsRef.current?.close();
+      pcRef.current?.close();
     };
   }, [searchParams]);
 
@@ -102,7 +90,7 @@ export default function Page() {
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
       <BackGround />
       <div className="relative z-10 flex flex-col gap-4 text-center">
-        <div className="text-white font-bold italic xl:text-5xl text-5xl p-4  rounded-lg">
+        <div className="text-white font-bold italic xl:text-5xl text-5xl p-4 rounded-lg">
           Upload, share, and download &mdash; it&apos;s that simple.
         </div>
       </div>
@@ -121,5 +109,13 @@ export default function Page() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function PageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConnectComponent />
+    </Suspense>
   );
 }
