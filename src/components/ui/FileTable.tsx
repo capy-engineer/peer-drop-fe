@@ -1,3 +1,4 @@
+import { Download, DownloadCloud } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -5,38 +6,43 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+} from "./table";
+import { Button } from "./button";
+import { FileMetadata } from "@/types/file";
 
-interface FileData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  timestamp: number;
-  progress?: number;
+interface FileTableProps {
+  files: FileMetadata[];
+  onDownload: (fileId: string) => void;
+  onDownloadAll: () => void;
 }
 
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+export function FileTable({
+  files,
+  onDownload,
+  onDownloadAll,
+}: FileTableProps) {
+  function formatBytes(bytes: number): string {
+    if (bytes === 0) return "0 Bytes";
 
-export function FileTable({ files }: { files: FileData[] }) {
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+
+    return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
+  }
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Size</TableHead>
-          <TableHead>Type</TableHead>
           <TableHead>Time</TableHead>
-          <TableHead>Progress</TableHead>
-          <TableHead>Actions</TableHead>
+          <TableHead className="text-right">
+            <Button variant="outline" size="sm" onClick={onDownloadAll}>
+              <DownloadCloud className="h-4 w-4 mr-2" />
+              Download All
+            </Button>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -44,13 +50,13 @@ export function FileTable({ files }: { files: FileData[] }) {
           <TableRow key={file.id}>
             <TableCell className="font-medium">{file.name}</TableCell>
             <TableCell>{formatBytes(file.size)}</TableCell>
-            <TableCell>{file.type}</TableCell>
             <TableCell>{new Date(file.timestamp).toLocaleString()}</TableCell>
-            <TableCell>
-              {file.progress !== undefined ? `${Math.round(file.progress)}%` : 'Complete'}
-            </TableCell>
-            <TableCell>
-              <Button variant="ghost" size="icon">
+            <TableCell className="text-right">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDownload(file.id)}
+              >
                 <Download className="h-4 w-4" />
               </Button>
             </TableCell>

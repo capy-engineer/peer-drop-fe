@@ -40,15 +40,14 @@ function ConnectPage() {
         // Listen for messages on the data channel
         dataChannel.onmessage = (messageEvent) => {
           try {
-            alert("Message received: " + messageEvent.data);
             const message: FileMessage = JSON.parse(messageEvent.data);
             if (message.type === "metadata") {
               fileChunks.current.set(message.id, []);
-              
+
               setFiles((prev) => [
                 ...prev,
                 {
-                  id : message.id,
+                  id: message.id,
                   name: message.name!,
                   size: message.size!,
                   type: message.type!,
@@ -68,7 +67,6 @@ function ConnectPage() {
                 // Handle complete file
                 console.log("File received:", file);
               }
-              
             }
           } catch (error) {
             console.error("Error processing message:", error);
@@ -77,9 +75,8 @@ function ConnectPage() {
 
         // Handle other events like open, close, or error
         dataChannel.onopen = () => {
-          alert("Data channel is open");
+          console.log("Data channel is open");
         };
-
 
         dataChannel.onerror = (error) => {
           console.error("Data channel error:", error);
@@ -140,10 +137,53 @@ function ConnectPage() {
       pcRef.current?.close();
     };
   }, [searchParams]);
+
+  const downloadFile = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = async (fileId: string) => {
+    try {
+      const chunks = fileChunks.current.get(fileId);
+      const fileData = files.find((f) => f.id === fileId);
+
+      if (!chunks || !fileData) {
+        throw new Error("File not found");
+      }
+
+      const blob = new Blob(chunks, { type: fileData.type });
+      downloadFile(blob, fileData.name);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    try {
+      for (const file of files) {
+        const chunks = fileChunks.current.get(file.id);
+        if (chunks) {
+          const blob = new Blob(chunks, { type: file.type });
+          downloadFile(blob, file.name);
+          // Add small delay between downloads
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+    } catch (error) {
+      console.error("Download all failed:", error);
+    }
+  };
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
       <BackGround />
-      <FileTable files={files} />
+      <FileTable files={files} onDownload={handleDownload} onDownloadAll={handleDownloadAll} />
       <style jsx global>{`
         @keyframes spinBlob {
           0% {
