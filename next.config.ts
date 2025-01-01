@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   images: {
     remotePatterns: [
       {
@@ -17,8 +16,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_WS_URL: "ws://192.168.1.14:8080/ws",
     NEXT_PUBLIC_HTTP_URL: "http://192.168.1.14:3000"
   },
-};
-module.exports = {
+
   output: 'standalone',
 };
 

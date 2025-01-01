@@ -1,50 +1,47 @@
-# Base stage for dependencies
-FROM node:20-alpine AS BASE
+# Base image with dependencies
+FROM node:20-alpine AS base
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the package.json and package-lock.json files
-COPY package*.json pnpm-lock.yaml ./
+# Copy package.json and yarn.lock for dependencies installation
+COPY package.json yarn.lock ./
 
-# Install the dependencies
+# Install dependencies
 RUN apk add --no-cache git \
-    && corepack enable \
-    && pnpm install --frozen-lockfile \
-    && pnpm store prune \
-    && rm -rf /tmp/*
+    && yarn install --frozen-lockfile \
+    && yarn cache clean
 
 # Build stage
-FROM node:20-alpine AS BUILD
+FROM node:20-alpine AS build
 
-# Set the working directory
 WORKDIR /app
 
-# Copy dependencies từ stage BASE
-COPY --from=BASE /app/node_modules ./node_modules
+# Copy node_modules from base image
+COPY --from=base /app/node_modules ./node_modules
+
+# Copy the rest of the source code
 COPY . .
 
+# Install curl and run the build
 RUN apk add --no-cache git curl \
-    && pnpm build \
+    && yarn build \
     && cd .next/standalone \
-    && npm prune --production
+    && node-prune
 
 # Production stage
-FROM node:20-alpine AS PRODUCTION
+FROM node:20-alpine AS production
 
-# Set the working directory
 WORKDIR /app
 
-# Copy necessary files form the build stage
-COPY --from=BUILD /app/public ./public
-COPY --from=BUILD /app/next.config.js ./
+# Copy necessary files from build image
+COPY --from=build /app/public ./public
+COPY --from=build /app/next.config.js ./
+COPY --from=build /app/.next/standalone ./.next/standalone
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/.next/server ./.next/server
 
-# Copy the standalone & static folder
-COPY --from=BUILD /app/.next/standalone ./
-COPY --from=BUILD /app/.next/static ./.next/static
-
-# Expose the port 3000
+# Expose port 3000 for the app
 EXPOSE 3000
 
-# Run the application
-CMD ["node", "server.js"]
+# Run the production server
+CMD ["node", ".next/standalone/server.js"]
