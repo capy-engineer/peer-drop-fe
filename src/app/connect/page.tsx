@@ -89,11 +89,9 @@ function ConnectComponent() {
   return (
     <div className="relative min-h-screen bg-black grid place-items-center overflow-hidden">
       <BackGround />
-      <div className="relative z-10 flex flex-col gap-4 text-center">
-        <div className="text-white font-bold italic xl:text-5xl text-5xl p-4 rounded-lg">
-          Upload, share, and download &mdash; it&apos;s that simple.
-        </div>
-      </div>
+
+    
+
 
       <style jsx global>{`
         @keyframes spinBlob {
