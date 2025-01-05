@@ -32,6 +32,10 @@ export default function Page() {
     files.forEach((file) => sendFile(file.file));
   };  
 
+  const deleteFile = (id: string) => {
+    setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id));
+  };
+
   const sendFile = async (file: File) => {
     if (!dataChannelRef.current) return;
     console.log("Sending file", file.name);
@@ -53,7 +57,11 @@ export default function Page() {
     let offset = 0;
 
     const sendChunk = async () => {
-      if (offset >= file.size) return;
+      if (offset >= file.size) {
+        // Delete file after transfer is complete
+        deleteFile(fileId);
+        return;
+      }
 
       const chunk = file.slice(offset, offset + CHUNK_SIZE);
       reader.readAsArrayBuffer(chunk);
@@ -135,7 +143,7 @@ export default function Page() {
           </div>
           <div className="flex justify-between mt-5">
             <FileUploader onDrop={onDrop} />
-            <FileList files={files} />
+            <FileList files={files} deleteFile={deleteFile}/>
           </div>
           <Button className="" onClick={sendFiles}>
             Send

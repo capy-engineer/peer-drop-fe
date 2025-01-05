@@ -31,7 +31,7 @@ export function FileTable({
   }
 
   return (
-    <Table>
+    <Table className="text-white">
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
@@ -39,8 +39,8 @@ export function FileTable({
           <TableHead>Time</TableHead>
           <TableHead className="text-right">
             <Button variant="outline" size="sm" onClick={onDownloadAll}>
-              <DownloadCloud className="h-4 w-4 mr-2" />
-              Download All
+              <DownloadCloud className="h-4 w-4" />
+              All
             </Button>
           </TableHead>
         </TableRow>
@@ -48,7 +48,11 @@ export function FileTable({
       <TableBody>
         {files.map((file) => (
           <TableRow key={file.id}>
-            <TableCell className="font-medium">{file.name}</TableCell>
+            <TableCell className="font-medium">
+              {file.name.length > 20
+                ? file.name.substring(0, 20) + "..."
+                : file.name}
+            </TableCell>
             <TableCell>{formatBytes(file.size)}</TableCell>
             <TableCell>{new Date(file.timestamp).toLocaleString()}</TableCell>
             <TableCell className="text-right">

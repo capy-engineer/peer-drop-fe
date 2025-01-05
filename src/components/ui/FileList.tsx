@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 interface FileUpload {
+  id: string;
   file: File;
   progress: number;
   status: "Uploading" | "Completed" | "Failed";
@@ -8,9 +9,10 @@ interface FileUpload {
 
 export interface FileListProps {
   files: FileUpload[];
+  deleteFile: (id: string) => void;
 }
 
-export default function FileList({ files }: FileListProps) {
+export default function FileList({ files,deleteFile }: FileListProps) {
   const getFileIcon = (type: string) => {
     if (type.startsWith("image/"))
       return "https://img.icons8.com/color/48/image.png";
@@ -54,6 +56,21 @@ export default function FileList({ files }: FileListProps) {
                     ></div>
                   </div>
                 </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="size-6 cursor-pointer mr-2"
+                  onClick={() => deleteFile(file.id)}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18 18 6M6 6l12 12"
+                  />
+                </svg>
               </div>
             </li>
           ))}
